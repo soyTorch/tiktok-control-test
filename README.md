@@ -7,8 +7,9 @@ Proyecto de prueba para verificar la conexión con dispositivos Android usando *
 - Docker instalado
 - Dispositivo Android con:
   - Depuración USB habilitada
-  - Conectado por USB al ordenador
+  - Conectado por USB al ordenador (inicialmente)
   - Modo de desarrollador activado
+- **En macOS**: Android Platform Tools (`brew install android-platform-tools`)
 
 ## 🚀 Construcción de la Imagen
 
@@ -18,12 +19,45 @@ docker build -t uiautomator2-test .
 
 ## 🔧 Uso
 
-### En macOS
+### En macOS (Recomendado - ADB sobre TCP/IP)
 
+Docker Desktop en macOS no tiene acceso directo a USB. Usa ADB sobre TCP/IP:
+
+**Opción 1: Script automático** (Recomendado)
 ```bash
+# 1. Asegúrate de que tu dispositivo está conectado por USB
+# 2. Ejecuta el script de configuración:
+./setup_adb_tcp.sh
+
+# 3. Ejecuta el contenedor con la IP que te muestre el script:
 docker run --rm -it \
-  --privileged \
-  -v /var/run:/var/run \
+  --network host \
+  -e DEVICE_ADDRESS=<IP_DISPOSITIVO>:5555 \
+  uiautomator2-test
+```
+
+**Opción 2: Manual**
+```bash
+# 1. Conecta tu dispositivo por USB
+adb devices  # Verifica que aparece
+
+# 2. Habilita TCP/IP en puerto 5555
+adb tcpip 5555
+
+# 3. Obtén la IP del dispositivo (Ajustes > Acerca del teléfono > Estado)
+# Por ejemplo: 192.168.1.100
+
+# 4. Conecta por WiFi
+adb connect 192.168.1.100:5555
+
+# 5. Verifica la conexión
+adb devices
+
+# 6. Ahora puedes desconectar el cable USB
+# 7. Ejecuta el contenedor:
+docker run --rm -it \
+  --network host \
+  -e DEVICE_ADDRESS=192.168.1.100:5555 \
   uiautomator2-test
 ```
 
@@ -51,25 +85,14 @@ docker run --rm -it \
 
 ## 📝 Notas Importantes
 
-### Permisos USB en macOS
+### Scripts Disponibles
 
-En macOS, el acceso a dispositivos USB desde Docker puede ser complejo. Alternativas:
+El proyecto incluye dos scripts de prueba:
 
-1. **Usar ADB sobre TCP/IP** (Recomendado para macOS):
-   ```bash
-   # En tu máquina host, conecta el dispositivo y ejecuta:
-   adb tcpip 5555
-   adb connect <IP_DEL_DISPOSITIVO>:5555
-   
-   # Luego ejecuta el contenedor con acceso a la red del host:
-   docker run --rm -it --network host uiautomator2-test
-   ```
+1. **`test_device.py`** - Script original para Linux (acceso USB directo)
+2. **`test_device_tcp.py`** - Script optimizado para macOS (conexión TCP/IP)
 
-2. **Modificar el script para conexión TCP**:
-   ```python
-   # En test_device.py, cambia la línea de conexión a:
-   d = u2.connect('<IP_DEL_DISPOSITIVO>:5555')
-   ```
+El contenedor usa por defecto `test_device_tcp.py` que es compatible con macOS.
 
 ### Primera ejecución
 
@@ -123,10 +146,13 @@ El script `test_device.py` realiza las siguientes verificaciones:
 
 ```
 .
-├── Dockerfile          # Configuración del contenedor
-├── requirements.txt    # Dependencias Python
-├── test_device.py      # Script de prueba
-└── README.md          # Este archivo
+├── Dockerfile              # Configuración del contenedor
+├── requirements.txt        # Dependencias Python
+├── test_device.py          # Script de prueba (Linux/USB)
+├── test_device_tcp.py      # Script de prueba (macOS/TCP)
+├── setup_adb_tcp.sh        # Script de configuración para macOS
+├── .gitignore              # Archivos ignorados por git
+└── README.md              # Este archivo
 ```
 
 ## 🔗 Enlaces Útiles

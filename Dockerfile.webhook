@@ -1,0 +1,14 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Instalar dependencias
+RUN pip install --no-cache-dir flask flask-cors
+
+# Copiar script webhook
+COPY app/webhook.py .
+
+EXPOSE 9090
+
+CMD ["python", "webhook.py"]
+

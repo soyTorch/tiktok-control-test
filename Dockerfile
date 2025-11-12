@@ -1,12 +1,15 @@
+# syntax=docker/dockerfile:1
 FROM python:3.11-slim
 
 # Instalar dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y \
     wget \
     unzip \
-    adb \
+    android-tools-adb \
+    android-tools-fastboot \
     udev \
     libusb-1.0-0 \
+    usbutils \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
@@ -17,16 +20,20 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar los scripts de prueba y entrypoint
+# Copiar scripts y entrypoint
 COPY test_device.py .
 COPY test_device_tcp.py .
 COPY entrypoint.sh .
 
-# Exponer puerto para adb (opcional, para conexiones TCP)
+# Exponer el puerto del servidor ADB
 EXPOSE 5037
 
-# Configurar variables de entorno
+# Variables de entorno
 ENV PYTHONUNBUFFERED=1
+ENV ADB_VENDOR_KEYS=/root/.android/adbkey
 
-# Entrypoint selecciona script USB o TCP según DEVICE_ADDRESS
-ENTRYPOINT ["./entrypoint.sh"]
+# Crear volúmenes para acceso USB y claves ADB
+VOLUME ["/dev/bus/usb", "/root/.android"]
+
+# Iniciar ADB al arrancar el contenedor
+ENTRYPOINT ["bash", "-c", "adb start-server && ./entrypoint.sh"]

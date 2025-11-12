@@ -24,7 +24,9 @@ RUN pip3 install --no-cache-dir -r requirements.txt
 COPY app/ ./app/
 
 # Configurar permisos USB
-RUN echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="*", MODE="0664", GROUP="plugdev"' > /etc/udev/rules.d/51-android.rules
+RUN if ! getent group plugdev >/dev/null; then groupadd -r plugdev; fi && \
+    mkdir -p /etc/udev/rules.d && \
+    echo 'SUBSYSTEM=="usb", ATTR{idVendor}=="*", MODE="0664", GROUP="plugdev"' > /etc/udev/rules.d/51-android.rules
 
 # Script de inicio
 COPY entrypoint.sh /entrypoint.sh

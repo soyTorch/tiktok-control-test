@@ -17,9 +17,10 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copiar los scripts de prueba
+# Copiar los scripts de prueba y entrypoint
 COPY test_device.py .
 COPY test_device_tcp.py .
+COPY entrypoint.sh .
 
 # Exponer puerto para adb (opcional, para conexiones TCP)
 EXPOSE 5037
@@ -27,5 +28,5 @@ EXPOSE 5037
 # Configurar variables de entorno
 ENV PYTHONUNBUFFERED=1
 
-# Comando por defecto (usa el script TCP para macOS)
-CMD ["python", "test_device_tcp.py"]
+# Entrypoint selecciona script USB o TCP según DEVICE_ADDRESS
+ENTRYPOINT ["./entrypoint.sh"]

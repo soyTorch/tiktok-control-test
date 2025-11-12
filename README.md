@@ -64,9 +64,19 @@ docker run --rm -it \
 ### En Linux
 
 ```bash
+# 1. Asegúrate de que el host ve el dispositivo
+adb devices
+
+# 2. Detén el servidor ADB del host para liberar el USB (opcional pero recomendado)
+adb kill-server
+
+# 3. Ejecuta el contenedor compartiendo el bus USB y tus claves ADB
+#    (reemplaza $HOME si tu docker no expande variables)
 docker run --rm -it \
   --privileged \
   -v /dev/bus/usb:/dev/bus/usb \
+  -v $HOME/.android:/root/.android \
+  -e ADB_VENDOR_KEYS=/root/.android/adbkey \
   uiautomator2-test
 ```
 
@@ -92,7 +102,9 @@ El proyecto incluye dos scripts de prueba:
 1. **`test_device.py`** - Script original para Linux (acceso USB directo)
 2. **`test_device_tcp.py`** - Script optimizado para macOS (conexión TCP/IP)
 
-El contenedor usa por defecto `test_device_tcp.py` que es compatible con macOS.
+El entrypoint selecciona automáticamente:
+- `test_device_tcp.py` si defines `DEVICE_ADDRESS`
+- `test_device.py` en cualquier otro caso (USB)
 
 ### Primera ejecución
 

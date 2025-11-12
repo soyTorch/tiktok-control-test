@@ -1,118 +1,55 @@
 #!/usr/bin/env python3
 """
-Script de prueba para verificar la conexión con dispositivos Android
-usando uiautomator2 y adb desde un contenedor Docker.
+Script para listar dispositivos Android conectados vía ADB
 """
-
+import subprocess
 import sys
-import time
-import uiautomator2 as u2
-from adbutils import adb
 
-
-def check_adb_connection():
-    """Verifica la conexión con adb"""
-    print("=" * 50)
-    print("🔍 Verificando conexión ADB...")
-    print("=" * 50)
-    
+def list_devices():
+    """Lista los dispositivos Android conectados"""
     try:
-        # Listar dispositivos conectados
-        devices = adb.device_list()
+        # Matar el servidor adb si está corriendo para reiniciarlo
+        subprocess.run(['adb', 'kill-server'], capture_output=True)
         
-        if not devices:
-            print("❌ No se encontraron dispositivos conectados")
-            print("\n💡 Asegúrate de:")
-            print("  1. Tener un dispositivo Android conectado por USB")
-            print("  2. Haber habilitado 'Depuración USB' en el dispositivo")
-            print("  3. Haber aceptado la autorización en el dispositivo")
-            print("  4. Ejecutar Docker con --privileged y -v /dev/bus/usb:/dev/bus/usb")
-            return None
+        # Iniciar el servidor adb
+        subprocess.run(['adb', 'start-server'], check=True, capture_output=True)
         
-        print(f"✅ Se encontraron {len(devices)} dispositivo(s):")
-        for i, device in enumerate(devices, 1):
-            print(f"  {i}. Serial: {device.serial}")
-            print(f"     Estado: {device.state}")
+        # Listar dispositivos
+        result = subprocess.run(
+            ['adb', 'devices'],
+            capture_output=True,
+            text=True,
+            check=True
+        )
         
-        return devices[0].serial
-    
-    except Exception as e:
-        print(f"❌ Error al verificar conexión ADB: {e}")
-        return None
-
-
-def check_uiautomator2(serial):
-    """Verifica la conexión con uiautomator2"""
-    print("\n" + "=" * 50)
-    print("🔍 Verificando conexión UIAutomator2...")
-    print("=" * 50)
-    
-    try:
-        # Conectar al dispositivo
-        d = u2.connect(serial)
-        
-        # Obtener información del dispositivo
-        info = d.info
-        
-        print("✅ Conexión UIAutomator2 exitosa!")
-        print(f"\n📱 Información del dispositivo:")
-        print(f"  Marca: {info.get('brand', 'N/A')}")
-        print(f"  Modelo: {info.get('model', 'N/A')}")
-        print(f"  Versión Android: {info.get('version', 'N/A')}")
-        print(f"  Resolución: {info.get('displayWidth', 'N/A')}x{info.get('displayHeight', 'N/A')}")
-        
-        # Probar una operación simple
-        print("\n🧪 Probando operación básica (obtener tamaño de pantalla)...")
-        window_size = d.window_size()
-        print(f"  Tamaño de ventana: {window_size}")
-        
-        # Verificar si la pantalla está encendida
-        screen_on = d.screen_on
-        print(f"  Pantalla encendida: {'Sí' if screen_on else 'No'}")
-        
-        return True
-    
-    except Exception as e:
-        print(f"❌ Error al verificar UIAutomator2: {e}")
-        print("\n💡 Puede que necesites instalar uiautomator2 en el dispositivo:")
-        print(f"  python -m uiautomator2 init {serial}")
-        return False
-
-
-def main():
-    """Función principal"""
-    print("\n" + "🚀 " * 20)
-    print("  TEST DE CONEXIÓN: Docker + ADB + UIAutomator2")
-    print("🚀 " * 20 + "\n")
-    
-    # Esperar un momento para que adb server se inicie
-    print("⏳ Esperando inicio del servidor ADB...")
-    time.sleep(2)
-    
-    # Verificar conexión ADB
-    serial = check_adb_connection()
-    
-    if not serial:
-        print("\n" + "=" * 50)
-        print("❌ Test FALLIDO: No se pudo conectar via ADB")
         print("=" * 50)
+        print("DISPOSITIVOS ANDROID CONECTADOS:")
+        print("=" * 50)
+        print(result.stdout)
+        print("=" * 50)
+        
+        # Contar dispositivos (excluyendo la línea de encabezado y líneas vacías)
+        lines = [l for l in result.stdout.strip().split('\n') if l.strip() and 'List of devices' not in l]
+        device_count = len(lines)
+        
+        if device_count == 0:
+            print("⚠️  No se encontraron dispositivos conectados")
+            sys.exit(1)
+        else:
+            print(f"✅ Total de dispositivos encontrados: {device_count}")
+            sys.exit(0)
+            
+    except subprocess.CalledProcessError as e:
+        print(f"❌ Error ejecutando adb: {e}")
+        print(f"Salida: {e.stdout}")
+        print(f"Error: {e.stderr}")
         sys.exit(1)
-    
-    # Verificar conexión UIAutomator2
-    success = check_uiautomator2(serial)
-    
-    if success:
-        print("\n" + "=" * 50)
-        print("✅ Test EXITOSO: Todas las conexiones funcionan correctamente")
-        print("=" * 50)
-        sys.exit(0)
-    else:
-        print("\n" + "=" * 50)
-        print("⚠️  Test PARCIAL: ADB funciona pero UIAutomator2 necesita configuración")
-        print("=" * 50)
-        sys.exit(2)
+    except FileNotFoundError:
+        print("❌ Error: adb no está instalado o no está en el PATH")
+        sys.exit(1)
+    except Exception as e:
+        print(f"❌ Error inesperado: {e}")
+        sys.exit(1)
 
-
-if __name__ == "__main__":
-    main()
-
+if __name__ == '__main__':
+    list_devices()

@@ -1,0 +1,11 @@
+version: '3.8'
+
+services:
+  tiktok-adb:
+    build: .
+    container_name: tiktok-adb-test
+    privileged: true
+    devices:
+      - /dev/bus/usb:/dev/bus/usb
+    restart: unless-stopped
+

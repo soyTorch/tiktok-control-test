@@ -1,3 +1,0 @@
-uiautomator2==3.2.3
-adbutils>=2.5.0,<3.0.0
-
